@@ -1,0 +1,57 @@
+- hosts: _bastion
+  vars:
+     user: "ec2-user"
+     packages: ["ansible", "git","python3","python2-pip", "python-setuptools"]
+     servers_ssh_key_name: "one2n-dev-service.prm"
+     pip_packages: ["pexpect", "boto3", "botocore", "awscli"]
+  tasks:  
+  - name: "Enable epel reo"
+    shell: "amazon-linux-extras install epel -y && yum-config-manager --enable epel"
+ 
+  - name: "yum update"
+    yum:
+      name: "*"
+      state: latest
+
+  - name: "Install packages"
+    yum:
+      name: "{{item}}"
+      state: latest
+    loop: "{{packages}}"
+
+  - name: "Install pip packages "
+    pip:
+      name: "{{item}}"
+    loop: "{{ pip_packages }}"
+    become: False
+
+  - name: "Copy servers private key file"
+    copy: 
+      src: "../ssh_keys/"
+      dest: "{{ ansible_env.PWD }}/.ssh/"
+      mode: "0600"
+      owner: "{{ user }}"
+    
+  - name: "Copy all the playbooks to bastion servers"
+    copy: 
+      src: "{{lookup('env', 'PWD') }}"
+      dest: "{{ansible_env.PWD }}"
+      owner: "{{ user }}"
+    become: False
+    
+  - name: "Copy vars.yml for dyanamic variables"
+    template: 
+       src: "vars.yml.j2"
+       dest: "{{ansible_env.PWD }}/ansible/vars.yml"
+    become: False
+    
+  - name: "configure aws cli"
+    expect:
+      command: "aws configure"
+      responses:
+          'AWS Access Key ID \[None\]: ': "{{aws_access_key}}"
+          'AWS Secret Access Key \[None\]: ': "{{aws_secret_key}}" 
+          'Default region name \[None\]: ': "{{aws_region}}"
+          'Default output format \[None\]: ': "json"
+    become: False
+    ignore_errors: yes

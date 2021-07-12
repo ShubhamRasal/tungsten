@@ -62,7 +62,7 @@ module "rds" {
 
 module "s3" {
   source = "./modules/s3"
-  bucket_name         = "one2n-demo-bucket"
+  bucket_name         = var.s3_bucket_name
   project_prefix      = local.project_prefix
 }
 
