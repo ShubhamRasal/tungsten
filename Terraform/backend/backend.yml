@@ -1,0 +1,31 @@
+- hosts: localhost
+  # vars:
+  #   aws_region: "ap-south-1"
+  #   dynamo_table: "tfstate_lock"
+  #   bucket_name: "terraform-backend-shubham-rasal"
+  tasks:
+  - name: "S3 create bucket for backend"
+    s3_bucket:
+      name: "{{bucket_name}}"
+      state: present
+      policy: "{{ lookup('template', 's3_policy.json.j2') }}"
+      versioning: yes
+      encryption: "AES256"
+      delete_public_access: true
+
+  - name: Create dynamo table with hash primary key
+    dynamodb_table:
+      name: "{{dynamo_table}}"
+      region: "{{aws_region}}"
+      hash_key_name: LockID
+      hash_key_type: STRING
+      read_capacity: 1
+      write_capacity: 1
+      tags:
+        NAME: "Tfstate-lock-{{bucket_name}}" 
+      state: present
+
+  - name: "Create backend.tf"
+    template: 
+        src: "backend.tf.j2"
+        dest: "../backend.tf"

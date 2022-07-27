@@ -1,0 +1,51 @@
+- hosts: _server
+  vars:
+      ansible_python_interpreter: "/usr/bin/python2.7"
+      registry_host_port: "5000" 
+      registry_host_debug_port: "5001" 
+  vars_files:
+  - vars.yml
+  tasks: 
+  - name: "Pull docker registry image"
+    docker_image: 
+      name: "registry"
+      state: present
+      source: pull
+   
+  - name: "launch docker registry container"
+    docker_container:
+       name: "registry"
+       image: "registry"
+       state: started
+       restart_policy: always
+       ports:
+       - "{{registry_host_port}}:5000"
+       - "5001:5001" 
+       env: 
+          REGISTRY_HTTP_ADDR: ":5000"
+          REGISTRY_STORAGE: "s3"
+          REGISTRY_STORAGE_S3_REGION: "{{s3_region}}"
+          REGISTRY_STORAGE_S3_BUCKET: "{{s3_bucket}}"
+          REGISTRY_STORAGE_S3_ACCESSKEY: "{{s3_access_key}}"
+          REGISTRY_STORAGE_S3_SECRETKEY: "{{s3_secret_key}}"
+          REGISTRY_STORAGE_CACHE_BLOBDESCRIPTOR: "inmemory"
+          REGISTRY_STORAGE_S3_ROOTDIRECTORY: "/"
+          REGISTRY_HTTP_DEBUG_ADDR: "0.0.0.0:5001"
+
+  - name: "Validating the port is open"
+    wait_for:
+            host: "localhost"
+            port: "{{registry_host_port}}"                    # for node Update it later"
+            delay: 10
+            timeout: 30
+            state: started
+            msg: "Registry container is not running"
+
+  - name: "Check registry response"
+    uri:
+      url: "http://localhost:{{registry_host_port}}/"
+ 
+  - name: "Check registry health response"
+    uri:
+      url: "http://localhost:{{registry_host_debug_port}}/debug/health"
+    tags: "health"

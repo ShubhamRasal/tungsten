@@ -1,0 +1,19 @@
+- hosts: _server
+  vars: 
+     packages: ["docker" , "python3", "python2-pip"]
+  tasks:
+  - name: "Enable epel reo"
+    shell: "amazon-linux-extras install epel -y && yum-config-manager --enable epel"
+  - name: "Install packages"
+    yum:
+       name: "{{ item }}"
+       state: latest
+    loop: "{{ packages }}"
+
+  - name: "starting docker service"
+    service:
+      name: "docker"
+      state: started
+  
+  - name: "pip install ..."
+    command: "pip install docker botocore boto3 --user"
